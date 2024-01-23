@@ -1,0 +1,3 @@
+[submodule "atomicals-js"]
+	path = atomicals-js
+	url = git@gitlab.com:zhirenai/bullish/atomicals-js.git
