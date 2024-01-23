@@ -5,15 +5,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon main.ts",
-    "buildts": "esbuild main.ts **/*.ts --outdir=build",
+    "dev": "nodemon",
+    "buildts": "esbuild --outdir=build main.ts $(find controllers database helpers middlewares -type f -name \"*.ts\" )",
     "build": "tsc --project tsconfig.json",
     "postbuild": "tsconfig-replace-paths -p tsconfig.json",
+    "build:atomicals-js": "tsc -p ./atomicals-js --outDir atomicals/lib || exit 0",
+    "postbuild:atomicals-js": "ln -s $(pwd)/atomicals-js/node_modules $(pwd)/atomicals/node_modules",
     "start": "node --experimental-specifier-resolution=node build/main.js",
     "premigrate": "sed -i 's/\"type\": \"module\"/\"type\": \"commonjs\"/' package.json",
     "migrate": "typeorm migration:run"
   },
   "dependencies": {
+    "atomicals": "link:./atomicals/lib",
+    "crypto-js": "^4.2.0",
     "fast-json-patch": "^3.1.1",
     "koa": "^2.15.0",
     "koa-body": "^6.0.1",

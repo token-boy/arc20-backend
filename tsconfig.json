@@ -43,6 +43,6 @@
     "./middlewares/*.ts"
   ],
   "exclude": [
-    "./database/_migrations"
+    "./database/_migrations",
   ]
 }
