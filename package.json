@@ -1,0 +1,32 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Bullish backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon main.ts",
+    "buildts": "esbuild main.ts **/*.ts --outdir=build",
+    "build": "tsc --project tsconfig.json",
+    "postbuild": "tsconfig-replace-paths -p tsconfig.json",
+    "start": "node --experimental-specifier-resolution=node build/main.js",
+    "premigrate": "sed -i 's/\"type\": \"module\"/\"type\": \"commonjs\"/' package.json",
+    "migrate": "typeorm migration:run"
+  },
+  "dependencies": {
+    "fast-json-patch": "^3.1.1",
+    "koa": "^2.15.0",
+    "koa-body": "^6.0.1",
+    "koa-router": "^12.0.1",
+    "pg": "^8.11.3",
+    "reflect-metadata": "^0.2.1",
+    "typeorm": "^0.3.19"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.14.0",
+    "@types/koa-router": "^7.4.8",
+    "@types/node": "^20.11.5",
+    "tsconfig-replace-paths": "^0.0.14",
+    "typescript": "^5.3.3"
+  }
+}

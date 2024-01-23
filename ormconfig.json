@@ -1,0 +1,15 @@
+{
+  "type": "postgres",
+  "host": "127.0.0.1",
+  "port": 5432,
+  "username": "postgres",
+  "password": "2d017771-afcd-4a90-9265-39f0722542af",
+  "database": "bullish",
+  "logger": "simple-console",
+  "migrations": [
+    "./build/database/migrations/*.js"
+  ],
+  "cli": {
+    "migrationsDir": "./database/_migrations"
+  }
+}

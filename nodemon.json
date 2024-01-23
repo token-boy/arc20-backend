@@ -1,0 +1,19 @@
+{
+  "ext": "ts",
+  "ignore": [
+    ".git",
+    "node_modules",
+    "build"
+  ],
+  "exec": "npm run buildts && npm run postbuild && npm start",
+  "env": {
+    "NODE_ENV": "development",
+    "PORT": "8060",
+    "POSTGRES_HOST": "localhost",
+    "POSTGRES_PORT": "5432",
+    "POSTGRES_USERNAME": "postgres",
+    "POSTGRES_PASSWORD": "2d017771-afcd-4a90-9265-39f0722542af",
+    "POSTGRES_DATABASE": "bullish",
+    "ACCESS_CONTROL_LIST": "WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCJd"
+  }
+}

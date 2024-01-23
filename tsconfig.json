@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": "./",
+    "outDir": "./build",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "noImplicitAny": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "paths": {
+      "controllers": [
+        "./controllers"
+      ],
+      "database": [
+        "./database"
+      ],
+      "helpers": [
+        "./helpers"
+      ],
+      "helpers/*": [
+        "./helpers/*"
+      ],
+      "middlewares": [
+        "./middlewares"
+      ],
+      "middlewares/*": [
+        "./middlewares/*"
+      ],
+    }
+  },
+  "include": [
+    "./main.ts",
+    "./global.d.ts",
+    "./controllers/**/*.ts",
+    "./database/**/*.ts",
+    "./database/migrations/*.js",
+    "./helpers/*.ts",
+    "./middlewares/*.ts"
+  ],
+  "exclude": [
+    "./database/_migrations"
+  ]
+}
