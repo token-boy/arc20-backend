@@ -4,8 +4,16 @@ import { koaBody } from 'koa-body'
 import { HttpMethod, RouteDefinition } from 'helpers/route'
 
 import TestController from './TestController'
+import AtomicalController from './AtomicalController'
+import TokenController from './TokenController'
+import OrderController from './OrderController'
 
-const Controllers: any[] = [TestController]
+const Controllers: any[] = [
+  TestController,
+  AtomicalController,
+  TokenController,
+  OrderController,
+]
 
 function initRoutes(router: Router) {
   for (const Controller of Controllers) {

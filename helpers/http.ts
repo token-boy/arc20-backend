@@ -42,7 +42,8 @@ export class Http500 extends Error {
   public readonly status: number = 500
   public readonly code: number = 500
 
-  constructor(message: string) {
+  constructor(code: number, message: string) {
     super(message)
+    this.code = code
   }
 }

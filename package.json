@@ -6,24 +6,29 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon",
-    "buildts": "esbuild --outdir=build main.ts $(find controllers database helpers middlewares -type f -name \"*.ts\" )",
+    "buildts": "esbuild --outdir=build main.ts $(find controllers database helpers middlewares tasks -type f -name \"*.ts\" -o -name \"*.js\")",
     "build": "tsc --project tsconfig.json",
-    "postbuild": "tsconfig-replace-paths -p tsconfig.json",
+    "postbuild": "tsconfig-replace-paths -p tsconfig.json && cp helpers/miner/miner_bg.wasm build/helpers/miner/miner_bg.wasm",
     "build:atomicals-js": "tsc -p ./atomicals-js --outDir atomicals/lib || exit 0",
     "postbuild:atomicals-js": "ln -s $(pwd)/atomicals-js/node_modules $(pwd)/atomicals/node_modules",
     "start": "node --experimental-specifier-resolution=node build/main.js",
+    "start:arc20-indexer": "node --experimental-specifier-resolution=node build/tasks/arc20-indexer.js",
     "premigrate": "sed -i 's/\"type\": \"module\"/\"type\": \"commonjs\"/' package.json",
     "migrate": "typeorm migration:run"
   },
   "dependencies": {
     "atomicals": "link:./atomicals/lib",
+    "bitcoinjs-lib": "^6.1.5",
     "crypto-js": "^4.2.0",
+    "ecpair": "^2.1.0",
     "fast-json-patch": "^3.1.1",
+    "ioredis": "^5.3.2",
     "koa": "^2.15.0",
     "koa-body": "^6.0.1",
     "koa-router": "^12.0.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.1",
+    "tiny-secp256k1": "^2.2.3",
     "typeorm": "^0.3.19"
   },
   "devDependencies": {

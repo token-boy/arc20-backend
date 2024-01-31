@@ -1,13 +1,13 @@
 import { DataSource } from "typeorm";
-// import IORedis from "ioredis"
+// import Redis from "ioredis"
 
-import { Test } from "./entities";
+import { Order, Test, Token } from "./entities";
 
 // All data models.
-const models = [Test];
+const models = [Test, Token, Order];
 
 // Redis Address.
-// const REDIS_URI = `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+const REDIS_URI = `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
 
 export class Storage {
   private dataSource: DataSource;
@@ -37,7 +37,7 @@ export class Storage {
 
 export * from "./entities";
 
-// export const cache = new IORedis(REDIS_URI, { lazyConnect: true })
+// export const cache = new Redis(REDIS_URI, { lazyConnect: true })
 
 function initStorage() {
   const storage = new Storage();

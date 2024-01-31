@@ -102,7 +102,7 @@ export function Model(Clazz: any) {
         if (error instanceof Http404) {
           throw error
         }
-        throw new Http500(error.message)
+        throw new Http500(500, error.message)
       }
     }
   }
@@ -145,7 +145,7 @@ export function ModelPayload(ModelClass: any, PayloadClass: any) {
         if (error instanceof Http404) {
           throw error
         }
-        throw new Http500(error.message)
+        throw new Http500(500, error.message)
       }
     }
   }

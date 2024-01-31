@@ -16,6 +16,9 @@
       "controllers": [
         "./controllers"
       ],
+      "controllers/*": [
+        "./controllers/*"
+      ],
       "database": [
         "./database"
       ],
@@ -31,7 +34,10 @@
       "middlewares/*": [
         "./middlewares/*"
       ],
-    }
+      "tasks": [
+        "./tasks"
+      ]
+    },
   },
   "include": [
     "./main.ts",
@@ -40,9 +46,11 @@
     "./database/**/*.ts",
     "./database/migrations/*.js",
     "./helpers/*.ts",
-    "./middlewares/*.ts"
+    "./helpers/**/*",
+    "./middlewares/*.ts",
+    "./tasks/*.ts",
   ],
   "exclude": [
     "./database/_migrations",
-  ]
+  ],
 }

@@ -14,8 +14,5 @@ declare global {
 
   interface Ctx extends ParameterizedContext {
     params: Dict;
-    profile: {
-      uid: number;
-    };
   }
 }

@@ -8,12 +8,17 @@
   "exec": "npm run buildts && npm run postbuild && npm start",
   "env": {
     "NODE_ENV": "development",
-    "PORT": "8060",
+    "PORT": 8060,
     "POSTGRES_HOST": "localhost",
-    "POSTGRES_PORT": "5432",
+    "POSTGRES_PORT": 5432,
     "POSTGRES_USERNAME": "postgres",
     "POSTGRES_PASSWORD": "2d017771-afcd-4a90-9265-39f0722542af",
     "POSTGRES_DATABASE": "bullish",
-    "ACCESS_CONTROL_LIST": "WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCJd"
+    "REDIS_PASSWORD": "mempool",
+    "REDIS_HOST": "localhost",
+    "REDIS_PORT": 6379,
+    "ACCESS_CONTROL_LIST": "WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCJd",
+    "ELECTRUMX_PROXY_BASE_URL": "http://127.0.0.1:50040/proxy",
+    "NETWORK": "regtest"
   }
 }
