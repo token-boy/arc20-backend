@@ -8,12 +8,15 @@ export enum TokenProtocal {
 
 export enum OrderType {
   InitDFT = 1,
+  MintFT = 2,
+  MintDFT = 3
 }
 
 export enum OrderStatus {
   Pending = 1,
   Timeout = 2,
   Completed = 3,
+  WaitForMining = 4,
 }
 
 export const UINT_MAX = 2 ** 32 - 1

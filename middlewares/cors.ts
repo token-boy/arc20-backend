@@ -20,7 +20,7 @@ async function cors(ctx: Context, next: Next) {
     ctx.response.set('Access-Control-Allow-Origin', origin)
     ctx.response.set(
       'Access-Control-Allow-Headers',
-      'Authorization, Content-Type'
+      'X-Session-Id, Content-Type'
     )
     ctx.response.set(
       'Access-Control-Allow-Methods',

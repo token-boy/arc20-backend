@@ -1,5 +1,5 @@
 import { DataSource } from "typeorm";
-// import Redis from "ioredis"
+import Redis from "ioredis"
 
 import { Order, Test, Token } from "./entities";
 
@@ -37,7 +37,7 @@ export class Storage {
 
 export * from "./entities";
 
-// export const cache = new Redis(REDIS_URI, { lazyConnect: true })
+export const cache = new Redis(REDIS_URI, { lazyConnect: true })
 
 function initStorage() {
   const storage = new Storage();

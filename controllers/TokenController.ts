@@ -17,6 +17,7 @@ class TokenController {
         'mintCount',
         'supply',
         'holders',
+        'confirmed',
         'bitworkc',
       ],
     })

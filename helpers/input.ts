@@ -150,6 +150,21 @@ export function Message(validationMessage: ValidationMessage) {
   }
 }
 
+function checkType(type: ValidType, value: any) {
+  switch (type) {
+    case 'string':
+      return typeof value === 'string'
+    case 'number':
+      return !isNaN(Number(value))
+    case 'boolean':
+      return value === 'true' || value === 'false'
+    case 'object':
+      return typeof value === 'object'
+    default:
+      return true
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 export function validateInput(target: any, data: Dict = {}) {
   const fields = Reflect.getMetadata<string[]>('fields', target)
@@ -208,7 +223,7 @@ export function validateInput(target: any, data: Dict = {}) {
       } else {
         Object.defineProperty(target, field, { value, enumerable: true })
       }
-    } else if (type && typeof value !== type) {
+    } else if (type && !checkType(type, value)) {
       throw new Http400(
         400,
         Reflect.getMetadata('msg:type', target, field) ||

@@ -1,11 +1,14 @@
 import { Atomicals, ElectrumApi, createKeyPair } from 'atomicals'
 import type { CommandResultInterface } from 'atomicals/commands/command-result.interface'
 import { getKeypairInfo } from 'atomicals/utils/address-keypair-path'
+import type { KeyPairInfo } from 'atomicals/utils/address-keypair-path'
 import {
   AtomicalOperationBuilder,
   OUTPUT_BYTES_BASE,
   DUST_AMOUNT,
 } from 'atomicals/utils/atomical-operation-builder'
+import type { AtomicalOperationBuilderOptions } from 'atomicals/utils/atomical-operation-builder'
+import type { KeyPair } from 'atomicals/lib/utils/create-key-pair'
 import {
   AtomicalsPayload,
   prepareCommitRevealConfig,
@@ -16,21 +19,31 @@ import { ECPairFactory } from 'ecpair'
 import * as curve from 'tiny-secp256k1'
 import { randomUUID } from 'crypto'
 
-import { Order } from 'database'
+import { Order, Token, cache } from 'database'
 import { utxoListener } from 'tasks'
-import { Controller, Get, Payload, Post } from 'helpers/route'
-import { Http400, Http500 } from 'helpers/http'
-import { NETWORK, ORDER_EXPIRATION, OrderStatus, OrderType } from 'helpers/constants'
+import { Controller, Get, ModelPayload, Payload, Post } from 'helpers/route'
+import { Http400, Http404, Http500 } from 'helpers/http'
+import {
+  NETWORK,
+  ORDER_EXPIRATION,
+  OrderStatus,
+  OrderType,
+} from 'helpers/constants'
 import { sendNotification } from 'helpers/notification'
 import { mine } from 'helpers/miner'
 
 import InitDFTPayload from './InitDFTPayload'
+import MintFTPayload from './MintFTPayload'
+import MintDFTPayload from './MintDFTPayload'
 
 bitcoin.initEccLib(curve)
 const ECPair = ECPairFactory(curve)
 
 const electrum = ElectrumApi.createClient(process.env.ELECTRUMX_PROXY_BASE_URL)
+
 export const atomicals = new Atomicals(electrum)
+
+type OpType = 'dft' | 'ft' | 'dmt'
 
 function resolveData(result: CommandResultInterface) {
   if (!result.success) {
@@ -41,9 +54,88 @@ function resolveData(result: CommandResultInterface) {
 
 @Controller('/atomicals')
 class AtomicalController {
+  private async createKeyPair() {
+    const keyPair = await createKeyPair()
+    const keyPairRaw = ECPair.fromWIF(keyPair.WIF)
+    const keyPairInfo = getKeypairInfo(keyPairRaw)
+    return { keyPair, keyPairInfo }
+  }
+
+  // Calculate fees
+  private calcFees(
+    params: {
+      opType: OpType
+      keyPairInfo: KeyPairInfo
+      atomPayload: Dict
+      receiveAddress: string
+      satsbyte: number
+    } & Pick<
+      AtomicalOperationBuilderOptions,
+      'dftOptions' | 'ftOptions' | 'dmtOptions'
+    >
+  ) {
+    const { opType } = params
+
+    const config = prepareCommitRevealConfig(
+      opType,
+      params.keyPairInfo,
+      new AtomicalsPayload(params.atomPayload),
+      false
+    )
+    const builder = new AtomicalOperationBuilder({
+      electrumApi: electrum,
+      address: params.receiveAddress,
+      opType: opType,
+      dftOptions: params.dftOptions,
+      ftOptions: params.ftOptions,
+      dmtOptions: params.dmtOptions,
+      satsbyte: params.satsbyte,
+    })
+
+    let utxoValue = 546
+    if (opType === 'ft') {
+      utxoValue = params.ftOptions.fixedSupply
+    } else if (opType === 'dmt') {
+      utxoValue = params.dmtOptions.mintAmount
+    }
+
+    builder.addOutput({
+      address: params.receiveAddress,
+      value: utxoValue,
+    })
+    const fees = builder.calculateFeesRequiredForAccumulatedCommitAndReveal(
+      config.hashLockP2TR.redeem.output.length,
+      false
+    )
+
+    return fees
+  }
+
+  async createOrder(
+    ctx: Ctx,
+    type: OrderType,
+    receiveAddress: string,
+    keyPair: KeyPair,
+    metadata: Dict
+  ) {
+    const orderId = randomUUID()
+
+    const order = new Order()
+    order.id = orderId
+    ;(order.type = type), (order.status = OrderStatus.Pending)
+    order.sessionId = ctx.get('X-Session-Id')
+    order.receiveAddress = receiveAddress
+    order.keyPair = keyPair
+    order.metadata = metadata
+    order.expiredAt = new Date(Date.now() + ORDER_EXPIRATION)
+    await order.save()
+
+    return orderId
+  }
+
   @Post('/init-dft')
   @Payload(InitDFTPayload)
-  async initDft(payload: InitDFTPayload) {
+  async initDFT(payload: InitDFTPayload, ctx: Ctx) {
     const atomPayload = {
       name: payload.name.toUpperCase(),
       desc: payload.description,
@@ -60,96 +152,212 @@ class AtomicalController {
       },
     }
 
-    const keyPair = await createKeyPair()
-    const keyPairRaw = ECPair.fromWIF(keyPair.WIF)
-    const keyPairInfo = getKeypairInfo(keyPairRaw)
+    const { keyPair, keyPairInfo } = await this.createKeyPair()
 
-    // Calculate fees
-    const mockBaseCommitForFeeCalculation = prepareCommitRevealConfig(
-      'dft',
-      keyPairInfo,
-      new AtomicalsPayload(atomPayload),
-      false
-    )
-    const builder = new AtomicalOperationBuilder({
-      electrumApi: electrum,
-      address: payload.address,
+    const fees = this.calcFees({
       opType: 'dft',
+      keyPairInfo,
+      atomPayload,
+      receiveAddress: payload.address,
+      satsbyte: payload.satsbyte,
       dftOptions: {
         mintAmount: payload.mintAmount,
         maxMints: payload.maxMints,
         mintHeight: payload.mintHeight,
         ticker: payload.name,
       },
-      satsbyte: payload.satsbyte,
     })
-    builder.addOutput({
-      address: payload.address,
-      value: 546,
-    })
-    const fees = builder.calculateFeesRequiredForAccumulatedCommitAndReveal(
-      mockBaseCommitForFeeCalculation.hashLockP2TR.redeem.output.length,
-      false
+
+    const orderId = await this.createOrder(
+      ctx,
+      OrderType.InitDFT,
+      payload.address,
+      keyPair,
+      {
+        atomPayload,
+        fees,
+        satsbyte: payload.satsbyte,
+      }
     )
 
-    const orderId = randomUUID()
-
-    const order = new Order()
-    order.id = orderId
-    order.type = OrderType.InitDFT
-    order.status = OrderStatus.Pending
-    order.sessionId = ''
-    order.receiveAddress = payload.address
-    order.keyPair = keyPair
-    order.metadata = { atomPayload, fees, satsbyte: payload.satsbyte }
-    order.expiredAt = new Date(Date.now() + ORDER_EXPIRATION)
-    await order.save()
-
-    utxoListener.send({
-      channel: 'init-dft',
-      orderId,
-      payAddress: keyPair.address,
-      utxoValue: fees.commitAndRevealFeePlusOutputs
+    await cache.hset('payments', {
+      [orderId]: JSON.stringify({
+        address: keyPair.address,
+        amount: fees.commitAndRevealFeePlusOutputs,
+        opType: 'dft',
+        expiredAt: Date.now() + ORDER_EXPIRATION,
+      }),
     })
 
     return {
       orderId,
       payAddress: keyPair.address,
-      status: 'pending',
+      status: OrderStatus.Pending,
       fees,
     }
   }
 
-  static async finishInitDft(orderId: string, utxo: any) {
+  @Post('/mint-ft')
+  @Payload(MintFTPayload)
+  async mintFT(payload: MintFTPayload, ctx: Ctx) {
+    const atomPayload = {
+      name: payload.name.toUpperCase(),
+      desc: payload.description,
+      legal: { terms: payload.legalTerms },
+      args: {
+        time: Math.floor(Date.now() / 1000),
+        nonce: 0,
+        bitworkc: '0000',
+        request_ticker: payload.name.toLowerCase(),
+      },
+    }
+
+    const { keyPair, keyPairInfo } = await this.createKeyPair()
+
+    const fees = this.calcFees({
+      opType: 'ft',
+      keyPairInfo,
+      atomPayload,
+      receiveAddress: payload.address,
+      satsbyte: payload.satsbyte,
+      ftOptions: {
+        ticker: payload.name,
+        fixedSupply: payload.totalSupply,
+      },
+    })
+
+    const orderId = await this.createOrder(
+      ctx,
+      OrderType.MintFT,
+      payload.address,
+      keyPair,
+      {
+        atomPayload,
+        fees,
+        satsbyte: payload.satsbyte,
+        fixedSupply: payload.totalSupply,
+      }
+    )
+
+    await cache.hset('payments', {
+      [orderId]: JSON.stringify({
+        address: keyPair.address,
+        amount: fees.commitAndRevealFeePlusOutputs,
+        opType: 'ft',
+        expiredAt: Date.now() + ORDER_EXPIRATION,
+      }),
+    })
+
+    return {
+      orderId,
+      payAddress: keyPair.address,
+      status: OrderStatus.Pending,
+      fees,
+    }
+  }
+
+  @Post('/mint-dft')
+  @Payload(MintDFTPayload)
+  async mintDFT(payload: MintDFTPayload, ctx: Ctx) {
+    const token = await Token.findOneBy({ name: payload.name })
+    if (!token) {
+      throw new Http404(`Token ${payload.name} not found`)
+    }
+    if (token.bitworkc === '') {
+      throw new Http400(400, 'This token can not be minted')
+    }
+
+    const atomPayload = {
+      args: {
+        time: Math.floor(Date.now() / 1000),
+        nonce: 0,
+        bitworkc: token.bitworkc,
+        mint_ticker: payload.name.toLowerCase(),
+      },
+    }
+
+    const { keyPair, keyPairInfo } = await this.createKeyPair()
+
+    const fees = this.calcFees({
+      opType: 'dmt',
+      keyPairInfo,
+      atomPayload,
+      receiveAddress: payload.address,
+      satsbyte: payload.satsbyte,
+      dmtOptions: {
+        ticker: payload.name,
+        mintAmount: token.mintAmount,
+      },
+    })
+
+    console.log(fees)
+
+    const orderId = await this.createOrder(
+      ctx,
+      OrderType.MintDFT,
+      payload.address,
+      keyPair,
+      {
+        atomPayload,
+        fees,
+        satsbyte: payload.satsbyte,
+      }
+    )
+
+    await cache.hset('payments', {
+      [orderId]: JSON.stringify({
+        address: keyPair.address,
+        amount: fees.commitAndRevealFeePlusOutputs,
+        opType: 'dmt',
+        expiredAt: Date.now() + ORDER_EXPIRATION,
+      }),
+    })
+
+    return {
+      orderId,
+      payAddress: keyPair.address,
+      status: OrderStatus.Pending,
+      fees,
+    }
+  }
+
+  static async buildAtomical(
+    opType: OpType,
+    orderId: string,
+    utxo: any,
+    sequence?: number
+  ) {
     const order = await Order.findOneBy({ id: orderId })
     const { keyPair, receiveAddress, metadata } = order
     const { atomPayload, fees, satsbyte } = metadata
 
     const keyPairInfo = getKeypairInfo(ECPair.fromWIF(keyPair.WIF))
-    const updatedBaseCommit = prepareCommitRevealConfig(
-      'dft',
+    const config = prepareCommitRevealConfig(
+      opType,
       keyPairInfo,
       new AtomicalsPayload(atomPayload),
       false
     )
 
     // Mining
-    const mineResult = mine(
-      JSON.stringify({
-        privateKey: keyPair.privateKey,
-        utxoTxid: utxo.txid,
-        utxoVout: utxo.vout,
-        utxoValue: utxo.value,
-        // @ts-ignore
-        utxoScriptPubkey: keyPairInfo.output.toString('hex'),
-        outputValue: fees.revealFeePlusOutputs,
-        outputScriptPubkey: updatedBaseCommit.scriptP2TR.output.toString('hex'),
-        bitworkc: '0000',
-        seqStart: 0,
-        seqEnd: bitcoin.Transaction.DEFAULT_SEQUENCE,
-      })
-    )
-    const { sequence } = JSON.parse(mineResult)
+    if (sequence === undefined) {
+      const mineResult = mine(
+        JSON.stringify({
+          privateKey: keyPair.privateKey,
+          utxoTxid: utxo.txid,
+          utxoVout: utxo.vout,
+          utxoValue: utxo.value,
+          // @ts-ignore
+          utxoScriptPubkey: keyPairInfo.output.toString('hex'),
+          outputValue: fees.revealFeePlusOutputs,
+          outputScriptPubkey: config.scriptP2TR.output.toString('hex'),
+          bitworkc: '0000',
+          seqStart: 0,
+          seqEnd: bitcoin.Transaction.DEFAULT_SEQUENCE,
+        })
+      )
+      sequence = JSON.parse(mineResult).sequence
+    }
 
     let commitTxid: string
     let hashLockP2TR: bitcoin.payments.Payment
@@ -174,7 +382,7 @@ class AtomicalController {
         },
       })
       psbt.addOutput({
-        address: updatedBaseCommit.scriptP2TR.address,
+        address: config.scriptP2TR.address,
         value: fees.revealFeePlusOutputs,
       })
 
@@ -206,13 +414,13 @@ class AtomicalController {
       const result = await atomicals.broadcast(rawtx)
       if (!result.success) {
         sendNotification(
-          'Finish init-dft error',
+          `Build atomical ${opType} error`,
           `${orderId}: broadcast commit tx failed`
         )
         return
       }
       commitTxid = result.data
-      hashLockP2TR = updatedBaseCommit.hashLockP2TR
+      hashLockP2TR = config.hashLockP2TR
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -238,7 +446,7 @@ class AtomicalController {
       })
       psbt.addOutput({
         address: receiveAddress,
-        value: 546,
+        value: fees.revealFeePlusOutputs - fees.revealFeeOnly,
       })
       psbt.signInput(0, keyPairInfo.childNode)
 
@@ -259,7 +467,7 @@ class AtomicalController {
       const result = await atomicals.broadcast(tx.toHex())
       if (!result.success) {
         sendNotification(
-          'Finish init-dft error',
+          `Build atomical ${opType} error`,
           `${orderId}: broadcast reveal tx failed`
         )
         return

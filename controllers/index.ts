@@ -7,12 +7,16 @@ import TestController from './TestController'
 import AtomicalController from './AtomicalController'
 import TokenController from './TokenController'
 import OrderController from './OrderController'
+import SessionController from './SessionController'
+import MiningController from './MiningController'
 
 const Controllers: any[] = [
   TestController,
   AtomicalController,
   TokenController,
   OrderController,
+  SessionController,
+  MiningController
 ]
 
 function initRoutes(router: Router) {

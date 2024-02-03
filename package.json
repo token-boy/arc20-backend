@@ -17,6 +17,7 @@
     "migrate": "typeorm migration:run"
   },
   "dependencies": {
+    "@unisat/wallet-utils": "^1.0.0",
     "atomicals": "link:./atomicals/lib",
     "bitcoinjs-lib": "^6.1.5",
     "crypto-js": "^4.2.0",

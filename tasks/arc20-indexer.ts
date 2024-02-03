@@ -27,25 +27,28 @@ async function indexer() {
       })
       const ftInfoResult = await atom.getAtomicalFtInfo(atomical.atomical_id)
       const ftInfo = resolveData(ftInfoResult).result
+      const isDFT = !!ftInfo.dft_info
 
       if (token === null) {
         token = new Token()
         token.name = ftInfo.mint_info.args.request_ticker
         token.index = ftInfo.atomical_number
         token.protocal = TokenProtocal.ARC20
-        token.mintAmount = ftInfo.mint_info.args.mint_amount
-        token.maxMints = ftInfo.mint_info.args.max_mints
+        token.mintAmount = isDFT
+          ? ftInfo.mint_info.args.mint_amount
+          : ftInfo.$max_supply
+        token.maxMints = isDFT ? ftInfo.mint_info.args.max_mints : 1
         token.supply = ftInfo.$max_supply
-        token.mintCount = ftInfo.dft_info.mint_count
+        token.mintCount = isDFT ? ftInfo.dft_info.mint_count : 1
         token.burned = 0
         token.holders = ftInfo.location_summary.unique_holders
-        token.bitworkc = ftInfo.mint_info.args.mint_bitworkc
+        token.bitworkc = ftInfo.mint_info.args.mint_bitworkc ?? ''
         token.bitworkr = ftInfo.mint_info.args.mint_bitworkr ?? ''
         token.deployBlock = ftInfo.mint_info.commit_height
         token.deployer = ftInfo.mint_info.reveal_location_address
         token.deployedAt = new Date(ftInfo.mint_info.args.time * 1000)
         token.confirmed = ftInfo.$request_ticker_status.status === 'verified'
-        token.mintHeight = ftInfo.mint_info.args.mint_height
+        token.mintHeight = ftInfo.mint_info.args.mint_height ?? 0
         token.commitTx = ftInfo.mint_info.commit_txid
         token.revealTx = ftInfo.mint_info.reveal_location_txid
         token.outputIndex = ftInfo.mint_info.commit_index
@@ -53,7 +56,7 @@ async function indexer() {
         delete ftInfo.mint_data.fields.args
         token.metadata = ftInfo.mint_data.fields
       } else {
-        token.mintCount = ftInfo.dft_info.mint_count
+        token.mintCount = isDFT ? ftInfo.dft_info.mint_count : 1
         token.holders = ftInfo.location_summary.unique_holders
         token.confirmed = ftInfo.$request_ticker_status.status === 'verified'
       }
