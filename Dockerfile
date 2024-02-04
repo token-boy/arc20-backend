@@ -8,8 +8,8 @@ RUN pnpm i
 
 COPY . .
 
-RUN pnpm build:atomicals-js
-RUN pnpm build
+RUN npm run build:atomicals-js
+RUN npm run build
 
 EXPOSE 80
 
