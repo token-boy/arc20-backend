@@ -9,6 +9,7 @@ import TokenController from './TokenController'
 import OrderController from './OrderController'
 import SessionController from './SessionController'
 import MiningController from './MiningController'
+import NFTController from './NFTController'
 
 const Controllers: any[] = [
   TestController,
@@ -16,7 +17,8 @@ const Controllers: any[] = [
   TokenController,
   OrderController,
   SessionController,
-  MiningController
+  MiningController,
+  NFTController,
 ]
 
 function initRoutes(router: Router) {

@@ -1,0 +1,45 @@
+variables:
+  CONTAINER_IMAGE: $CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA
+  SERVICE_NAME: bullish-api
+
+build:
+  tags:
+    - ci
+  script:
+    - docker build --tag $CONTAINER_IMAGE .
+
+deploy:
+  stage: deploy
+  tags:
+    - ci
+  script:
+    - if [[ -z $(docker service ls --format="{{.Name}}" | grep -w $SERVICE_NAME) ]]; then
+    - docker service create
+      --name=$SERVICE_NAME
+      --replicas=1
+      --update-delay=10s
+      --env=NODE_ENV=production
+      --env=PORT=80
+      --env=POSTGRES_HOST=postgres
+      --env=POSTGRES_PORT=5432
+      --env=POSTGRES_USERNAME=postgres
+      --env=POSTGRES_PASSWORD=2d017771-afcd-4a90-9265-39f0722542af
+      --env=POSTGRES_DATABASE=bullish
+      --env=REDIS_PASSWORD=mempool
+      --env=REDIS_HOST=redis
+      --env=REDIS_PORT=6379
+      --env=ACCESS_CONTROL_LIST=WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHA6Ly9idWxsaXNoLm14c3l4LnNpdGUiXQ==
+      --env=ELECTRUMX_PROXY_BASE_URL=http://atomicals_electrumx-proxy/proxy
+      --env=NETWORK=regtest
+      --label="traefik.enable=true"
+      --label="traefik.docker.lbswarm=true"
+      --label="traefik.http.routers.$SERVICE_NAME.rule=Host(\`$SERVICE_NAME.mxsyx.site\`)"
+      --label="traefik.http.routers.$SERVICE_NAME.tls.certResolver=letsencrypt"
+      --label="traefik.http.services.$SERVICE_NAME.loadbalancer.server.port=80"
+      --network=traefik_default
+      $CONTAINER_IMAGE
+    - else
+    - docker service scale $SERVICE_NAME=2
+    - docker service update --image $CONTAINER_IMAGE $SERVICE_NAME
+    - docker service scale $SERVICE_NAME=1
+    - fi

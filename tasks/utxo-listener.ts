@@ -1,5 +1,6 @@
-import initStorage, { Order, cache } from 'database'
+import { MAX_SEQUENCE } from 'atomicals/utils/atomical-operation-builder'
 
+import initStorage, { Order, cache } from 'database'
 import { sendNotification } from 'helpers/notification'
 import AtomicalController, { atomicals } from 'controllers/AtomicalController'
 import initMiner from 'helpers/miner'
@@ -25,7 +26,6 @@ setInterval(async () => {
         confirmed: number
         utxos: any[]
       }
-      console.log(data)
 
       if (data.utxos.length == 0) {
         continue
@@ -49,7 +49,16 @@ setInterval(async () => {
           { status: OrderStatus.WaitForMining, utxo }
         )
       } else {
-        AtomicalController.buildAtomical(payment.opType, orderId, utxo)
+        let sequence = undefined
+        if (payment.opType === 'nft') {
+          sequence = MAX_SEQUENCE
+        }
+        AtomicalController.buildAtomical(
+          payment.opType,
+          orderId,
+          utxo,
+          sequence
+        )
       }
     } catch (error) {
       sendNotification('Utxo listener error', error.message)

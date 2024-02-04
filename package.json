@@ -9,6 +9,7 @@
     "buildts": "esbuild --outdir=build main.ts $(find controllers database helpers middlewares tasks -type f -name \"*.ts\" -o -name \"*.js\")",
     "build": "tsc --project tsconfig.json",
     "postbuild": "tsconfig-replace-paths -p tsconfig.json && cp helpers/miner/miner_bg.wasm build/helpers/miner/miner_bg.wasm",
+    "prebuild:atomicals-js": "cd atomicals-js && pnpm i",
     "build:atomicals-js": "tsc -p ./atomicals-js --outDir atomicals/lib || exit 0",
     "postbuild:atomicals-js": "ln -s $(pwd)/atomicals-js/node_modules $(pwd)/atomicals/node_modules",
     "start": "node --experimental-specifier-resolution=node build/main.js",

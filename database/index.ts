@@ -1,10 +1,10 @@
 import { DataSource } from "typeorm";
 import Redis from "ioredis"
 
-import { Order, Test, Token } from "./entities";
+import { NFT, Order, Test, Token } from "./entities";
 
 // All data models.
-const models = [Test, Token, Order];
+const models = [Test, Token, Order, NFT];
 
 // Redis Address.
 const REDIS_URI = `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`

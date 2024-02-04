@@ -1,8 +1,8 @@
 import { Atomicals, ElectrumApi } from 'atomicals'
 import type { CommandResultInterface } from 'atomicals/commands/command-result.interface'
 
-import initStorage, { Token } from 'database'
-import { TokenProtocal } from 'helpers/constants'
+import initStorage, { NFT, Token } from 'database'
+import { NFTProtocal, TokenProtocal } from 'helpers/constants'
 import { Http500 } from 'helpers/http'
 import { sendNotification } from 'helpers/notification'
 
@@ -18,7 +18,7 @@ function resolveData(result: CommandResultInterface) {
 }
 
 async function indexer() {
-  const result = await atom.list(20, -6, true)
+  const result = await atom.list(20, -20, true)
   const atomicals = resolveData(result).result
   for (const atomical of atomicals) {
     if (atomical.type === 'FT') {
@@ -62,6 +62,30 @@ async function indexer() {
       }
 
       await token.save()
+    } else if (atomical.type === 'NFT') {
+      // Static file
+      if (!atomical.mint_data.fields.args) {
+        const nft = await NFT.findOneBy({
+          commitTx: atomical.mint_info.commit_txid,
+        })
+        if (nft === null) {
+          const nft = new NFT()
+          const name = Object.keys(atomical.mint_data.fields)[0]
+          nft.name = name
+          nft.index = atomical.atomical_number
+          nft.protocal = NFTProtocal.Atomicals
+          nft.owner = atomical.mint_info.reveal_location_address
+          nft.mintAt = new Date(atomical.mint_info.blockheader_info.timestamp * 1000)
+          nft.commitTx = atomical.mint_info.commit_txid
+          nft.revealTx = atomical.mint_info.reveal_location_txid
+          nft.outputIndex = atomical.mint_info.commit_index
+  
+          delete atomical.mint_data.fields[name].$b
+          nft.metadata = atomical.mint_data.fields
+          await nft.save()
+        }
+      }
+
     }
   }
 }

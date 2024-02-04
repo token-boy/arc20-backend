@@ -6,10 +6,16 @@ export enum TokenProtocal {
   RUNE = 3,
 }
 
+export enum NFTProtocal {
+  Ordinals = 1,
+  Atomicals = 2,
+}
+
 export enum OrderType {
   InitDFT = 1,
   MintFT = 2,
-  MintDFT = 3
+  MintDFT = 3,
+  MintNFT = 4,
 }
 
 export enum OrderStatus {

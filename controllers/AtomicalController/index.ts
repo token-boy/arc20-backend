@@ -20,8 +20,7 @@ import * as curve from 'tiny-secp256k1'
 import { randomUUID } from 'crypto'
 
 import { Order, Token, cache } from 'database'
-import { utxoListener } from 'tasks'
-import { Controller, Get, ModelPayload, Payload, Post } from 'helpers/route'
+import { Controller, Get, Payload, Post } from 'helpers/route'
 import { Http400, Http404, Http500 } from 'helpers/http'
 import {
   NETWORK,
@@ -35,6 +34,7 @@ import { mine } from 'helpers/miner'
 import InitDFTPayload from './InitDFTPayload'
 import MintFTPayload from './MintFTPayload'
 import MintDFTPayload from './MintDFTPayload'
+import MintNFTPayload from './MintNFTPayload'
 
 bitcoin.initEccLib(curve)
 const ECPair = ECPairFactory(curve)
@@ -43,7 +43,7 @@ const electrum = ElectrumApi.createClient(process.env.ELECTRUMX_PROXY_BASE_URL)
 
 export const atomicals = new Atomicals(electrum)
 
-type OpType = 'dft' | 'ft' | 'dmt'
+type OpType = 'dft' | 'ft' | 'dmt' | 'nft'
 
 function resolveData(result: CommandResultInterface) {
   if (!result.success) {
@@ -71,7 +71,7 @@ class AtomicalController {
       satsbyte: number
     } & Pick<
       AtomicalOperationBuilderOptions,
-      'dftOptions' | 'ftOptions' | 'dmtOptions'
+      'dftOptions' | 'ftOptions' | 'dmtOptions' | 'nftOptions'
     >
   ) {
     const { opType } = params
@@ -89,6 +89,7 @@ class AtomicalController {
       dftOptions: params.dftOptions,
       ftOptions: params.ftOptions,
       dmtOptions: params.dmtOptions,
+      nftOptions: params.nftOptions,
       satsbyte: params.satsbyte,
     })
 
@@ -290,8 +291,6 @@ class AtomicalController {
       },
     })
 
-    console.log(fees)
-
     const orderId = await this.createOrder(
       ctx,
       OrderType.MintDFT,
@@ -321,6 +320,56 @@ class AtomicalController {
     }
   }
 
+  @Post('/mint-nft')
+  @Payload(MintNFTPayload)
+  async mintNFT(payload: MintNFTPayload, ctx: Ctx) {
+    const atomPayload = {
+      [payload.name]: payload.data,
+    }
+
+    const { keyPair, keyPairInfo } = await this.createKeyPair()
+
+    const fees = this.calcFees({
+      opType: 'nft',
+      keyPairInfo,
+      atomPayload,
+      receiveAddress: payload.address,
+      satsbyte: payload.satsbyte,
+      // TODO custom satsoutput
+      nftOptions: {
+        satsoutput: 546,
+      },
+    })
+
+    const orderId = await this.createOrder(
+      ctx,
+      OrderType.MintDFT,
+      payload.address,
+      keyPair,
+      {
+        atomPayload,
+        fees,
+        satsbyte: payload.satsbyte,
+      }
+    )
+
+    await cache.hset('payments', {
+      [orderId]: JSON.stringify({
+        address: keyPair.address,
+        amount: fees.commitAndRevealFeePlusOutputs,
+        opType: 'nft',
+        expiredAt: Date.now() + ORDER_EXPIRATION,
+      }),
+    })
+
+    return {
+      orderId,
+      payAddress: keyPair.address,
+      status: OrderStatus.Pending,
+      fees,
+    }
+  }
+
   static async buildAtomical(
     opType: OpType,
     orderId: string,
@@ -330,6 +379,13 @@ class AtomicalController {
     const order = await Order.findOneBy({ id: orderId })
     const { keyPair, receiveAddress, metadata } = order
     const { atomPayload, fees, satsbyte } = metadata
+    
+    if (opType === 'nft') {
+      for (const key in atomPayload) {
+        const base64Data = atomPayload[key] .split(',')[1]
+        atomPayload[key] = Buffer.from(base64Data, 'base64')
+      }
+    }
 
     const keyPairInfo = getKeypairInfo(ECPair.fromWIF(keyPair.WIF))
     const config = prepareCommitRevealConfig(
