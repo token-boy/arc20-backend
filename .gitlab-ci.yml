@@ -4,8 +4,8 @@ variables:
   # GIT_SUBMODULE_STRATEGY: recursive
   # GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=no
 
-before_script:
-  git submodule update --init --recursive
+# before_script:
+#   git submodule update --init --recursive
 
 build:
   tags:
