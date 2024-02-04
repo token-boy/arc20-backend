@@ -1,8 +1,11 @@
 variables:
   CONTAINER_IMAGE: $CI_PROJECT_NAME:$CI_COMMIT_SHORT_SHA
   SERVICE_NAME: bullish-api
-  GIT_SUBMODULE_STRATEGY: recursive
-  GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=no
+  # GIT_SUBMODULE_STRATEGY: recursive
+  # GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=no
+
+before_script:
+  git submodule update --init --recursive
 
 build:
   tags:
