@@ -29,7 +29,7 @@ export const UINT_MAX = 2 ** 32 - 1
 export const UINT8_MAX = 2 ** 64 - 1
 
 export const NETWORK =
-  process.env.NODE_ENV === 'development'
+  process.env.NETWORK === 'regtest'
     ? bitcoin.networks.regtest
     : bitcoin.networks.bitcoin
 
