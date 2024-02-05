@@ -80,13 +80,13 @@ async function indexer() {
 
           delete ftInfo.mint_data.fields.args
           token.metadata = ftInfo.mint_data.fields
+
+          console.log(
+            `New Token: ${token.commitTx}i${token.outputIndex} ${token.name}`
+          )
+  
+          token.save()
         }
-
-        console.log(
-          `New Token: ${token.commitTx}i${token.outputIndex} ${token.name}`
-        )
-
-        token.save()
       } else if (atomical.type === 'NFT') {
         // Static file
         if (!atomical.mint_data.fields.args) {
