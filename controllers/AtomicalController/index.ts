@@ -535,7 +535,6 @@ class AtomicalController {
       await order.save()
 
       sendNotification('New Dft', `${atomPayload.name}`)
-      console.log(`New Dft: ${result.data}`)
     }
   }
 

@@ -13,7 +13,7 @@
     "build:atomicals-js": "tsc -p ./atomicals-js --outDir atomicals/lib || exit 0",
     "postbuild:atomicals-js": "ln -s $(pwd)/atomicals-js/node_modules $(pwd)/atomicals/node_modules",
     "start": "node --experimental-specifier-resolution=node build/main.js",
-    "start:arc20-indexer": "node --experimental-specifier-resolution=node build/tasks/arc20-indexer.js",
+    "start:atomical-indexer": "node --experimental-specifier-resolution=node build/tasks/atomical-indexer.js",
     "premigrate": "sed -i 's/\"type\": \"module\"/\"type\": \"commonjs\"/' package.json",
     "migrate": "typeorm migration:run"
   },
