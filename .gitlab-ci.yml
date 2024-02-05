@@ -7,14 +7,16 @@ build:
   tags:
     - ci
   script:
-    - docker build --tag $CONTAINER_IMAGE .
+    - docker build 
+      --build-arg NPM_REGISTRY=https://registry.npm.taobao.org 
+      --tag $CONTAINER_IMAGE .
 
 deploy:
   stage: deploy
   tags:
     - ci
   script:
-    - if [[ -z $(docker service ls --format="{{.Name}}" | grep -w $SERVICE_NAME) ]]; then
+    - if [[ -z $(docker service ls --format="{{.Name}}" | grep -w ^$SERVICE_NAME\$) ]]; then
     - docker service create
       --name=$SERVICE_NAME
       --replicas=1

@@ -17,6 +17,24 @@ function resolveData(result: CommandResultInterface) {
   return result.data
 }
 
+async function syncARC20() {
+  const tokens = await Token.find({
+    where: { protocal: TokenProtocal.ARC20 },
+    select: ['id', 'commitTx', 'outputIndex'],
+  })
+  for (const token of tokens) {
+    const ftInfoResult = await atom.getAtomicalFtInfo(
+      `${token.commitTx}:${token.outputIndex}`
+    )
+    const ftInfo = resolveData(ftInfoResult).result
+    const isDFT = !!ftInfo.dft_info
+    token.mintCount = isDFT ? ftInfo.dft_info.mint_count : 1
+    token.holders = ftInfo.location_summary.unique_holders
+    token.confirmed = ftInfo.$request_ticker_status.status === 'verified'
+    token.save()
+  }
+}
+
 async function indexer() {
   const result = await atom.list(20, -20, true)
   const atomicals = resolveData(result).result
@@ -55,13 +73,9 @@ async function indexer() {
 
         delete ftInfo.mint_data.fields.args
         token.metadata = ftInfo.mint_data.fields
-      } else {
-        token.mintCount = isDFT ? ftInfo.dft_info.mint_count : 1
-        token.holders = ftInfo.location_summary.unique_holders
-        token.confirmed = ftInfo.$request_ticker_status.status === 'verified'
       }
 
-      await token.save()
+      token.save()
     } else if (atomical.type === 'NFT') {
       // Static file
       if (!atomical.mint_data.fields.args) {
@@ -75,24 +89,27 @@ async function indexer() {
           nft.index = atomical.atomical_number
           nft.protocal = NFTProtocal.Atomicals
           nft.owner = atomical.mint_info.reveal_location_address
-          nft.mintAt = new Date(atomical.mint_info.blockheader_info.timestamp * 1000)
+          nft.mintAt = new Date(
+            atomical.mint_info.blockheader_info.timestamp * 1000
+          )
           nft.commitTx = atomical.mint_info.commit_txid
           nft.revealTx = atomical.mint_info.reveal_location_txid
           nft.outputIndex = atomical.mint_info.commit_index
-  
+
           delete atomical.mint_data.fields[name].$b
           nft.metadata = atomical.mint_data.fields
-          await nft.save()
+
+          nft.save()
         }
       }
-
     }
   }
 }
 
 try {
   await initStorage()
-  indexer()
+  setInterval(indexer, 1000 * 60 * 10)
+  setInterval(syncARC20, 1000 * 60 * 5)
 } catch (error) {
-  sendNotification('Arc20 indexer error', error.message)
+  sendNotification('Atomical indexer error', error.message)
 }
