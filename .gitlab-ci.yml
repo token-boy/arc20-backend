@@ -31,7 +31,7 @@ deploy:
       --env=REDIS_PASSWORD=mempool
       --env=REDIS_HOST=redis
       --env=REDIS_PORT=6379
-      --env=ACCESS_CONTROL_LIST=WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHA6Ly9idWxsaXNoLm14c3l4LnNpdGUiXQ==
+      --env=ACCESS_CONTROL_LIST=WyJodHRwOi8vY2xpZW50LmRvY2tlciIsImh0dHBzOi8vYnVsbGlzaC5teHN5eC5zaXRlIl0=
       --env=ELECTRUMX_PROXY_BASE_URL=http://atomicals_electrumx-proxy:50040/proxy
       --env=NETWORK=regtest
       --label="traefik.enable=true"
