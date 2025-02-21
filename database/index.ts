@@ -24,6 +24,7 @@ export class Storage {
       logging: false,
       synchronize: true,
       logger: "simple-console",
+      ssl: true,
     });
   }
 
