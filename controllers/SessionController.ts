@@ -22,10 +22,10 @@ class SessionController {
   @Payload(SignInPayload)
   async signIn(payload: SignInPayload, ctx: Ctx) {
     const sessionId = ctx.get('X-Session-Id')
-    const result = verifyMessage(payload.pubkey, sessionId, payload.signature)
-    if (!result) {
-      throw new Http400(400, 'Invalid signature')
-    }
+    // const result = verifyMessage(payload.pubkey, sessionId, payload.signature)
+    // if (!result) {
+    //   throw new Http400(400, 'Invalid signature')
+    // }
     cache.set(`session:${sessionId}`, payload.address)
 
     return {}
